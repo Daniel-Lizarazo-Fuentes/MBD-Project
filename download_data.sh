@@ -1,22 +1,41 @@
 # Variables
-YEAR=2016
+START_YEAR=2016
+END_YEAR=2024
 
-DATASET_URL="https://huggingface.co/api/datasets/stanford-oval/ccnews/parquet/$YEAR/train"
-HDFS_DESTINATION="/user/s2551055/NewsData/$YEAR"
+BASE_URL="https://huggingface.co/api/datasets/stanford-oval/ccnews/parquet"
+HDFS_BASE_DESTINATION="/user/s2551055/NewsData/"
 
-hdfs dfs -mkdir -p "$HDFS_DESTINATION"
+for YEAR in $(seq $START_YEAR $END_YEAR); do
+    DATASET_URL="$BASE_URL/$YEAR/train"
+    echo $DATASET_URL
 
-echo "Downloading dataset metadata..."
-curl -X GET "$DATASET_URL" -o ccnews_urls.json
-PARQUET_URLS=$(grep -o '"https[^"]*.parquet"' ccnews_urls.json | sed 's/"//g')
+    HDFS_DESTINATION="$HDFS_BASE_DESTINATION/$YEAR"
 
-echo "Extracting files..."
-for PARQUET_URL in $PARQUET_URLS; do
-    echo "Downloading $PARQUET_URL..."
-    curl -X GET "$PARQUET_URL" -o "$PARQUET_URL.parquet"
-    echo "Uploading $PARQUET_URL to hdfs dfs..."
-    hdfs dfs -put "$PARQUET_URL.parquet" "$HDFS_DESTINATION"
-done 
+    echo "Creating HDFS directory: $HDFS_DESTINATION..."
+    hdfs dfs -mkdir -p "$HDFS_DESTINATION"
 
+    echo "Downloading dataset metadata..."
+    curl -X GET "$DATASET_URL" -o ccnews_urls.json
 
-echo "All files downloaded and uploaded successfully!"
+    PARQUET_URLS=$(grep -o '"https[^"]*.parquet"' ccnews_urls.json | sed 's/"//g')
+
+    echo "Fetching files..."
+    for PARQUET_URL in $PARQUET_URLS; do
+        FILE_NAME=$(basename "$PARQUET_URL")
+
+        echo "Downloading $PARQUET_URL to NFS..."
+        curl -L "$PARQUET_URL" -o "$FILE_NAME"
+
+        echo "Uploading "$FILE_NAME" to hdfs dfs..."
+        hdfs dfs -put ""$FILE_NAME"" "$HDFS_DESTINATION"
+
+        echo "Removing file $FILE_NAME from NFS..."
+        rm "$FILE_NAME"
+    done
+
+    echo "Completed processing for $YEAR."
+done
+
+rm ccnews_urls.json
+
+echo "Upload and cleanup complete."
