@@ -2,13 +2,11 @@
 
 # Setup python
 On local:
-```scp scp your_path/MBD-Project/news.py s2551055@spark-head2.eemcs.utwente.nl:/home/s2551055/```
+```scp your_path/MBD-Project/news.py s2551055@spark-head2.eemcs.utwente.nl:/home/s2551055/```
 
 Login to NFS shell and submit python file:
 Enter cluster envirmnemt ```ssh s2551055@spark-head2.eemcs.utwente.nl```, check if file present ```ls```
 ```spark-submit news.py```
-
-
 
 # Setup for downloading data to HDFS
 ## Connecting
