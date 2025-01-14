@@ -9,8 +9,8 @@ spark = SparkSession.builder.getOrCreate()
 
 # -------------------------------------- Basic schema inference  -----------------------------------------
 
-# df = spark.read.option("mergeSchema", "true").parquet("/user/s2551055/NewsData/2016")
-# df.printSchema()
+df = spark.read.option("mergeSchema", "true").parquet("/user/s2551055/NewsData/2016")
+df.printSchema()
 
 # RQ 1:
 # TODO
