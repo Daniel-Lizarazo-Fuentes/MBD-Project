@@ -38,4 +38,4 @@ done
 
 rm ccnews_urls.json
 
-echo "Upload and cleanup complete."
+echo "Upload and cleanup complete." 
