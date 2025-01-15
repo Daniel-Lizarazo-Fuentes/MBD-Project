@@ -27,3 +27,9 @@ Next there's the shell file which downloads the entire dataset (```download_data
 4. Execute: ```./shell_file.sh```,<br> if an error about illegal formats appears you most likely modified the shell file in an windows envirnement (adds different charachter artifacts) which can be fixed with ```sed -i 's/\r$//' shell_file.sh``` on the NFS, preferably fix it before uploading to your NFS (things on main are commited from Arch and should not have artifacts so you should always be able to revert).
 5. Wait a bit, and then a bit more
 6. Happy Happy Happy
+
+## Resource usage
+In the case that you're running one of the python files with custom settings keep in mind to check:<br>
+<a href="https://spark-nn.eemcs.utwente.nl:8088/cluster">Cluster Dashbaord</a>
+
+As the full data import takes long it can happen in parts, this is supported by the ```download_data_full.sh``` script. You can specify a start point (stay at 2016_0000 to import from the start) which can be handy in the case of interuptions of the program, partially writen files can be overwriten by starting before them. 

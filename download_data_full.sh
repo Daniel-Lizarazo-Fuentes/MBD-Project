@@ -8,24 +8,33 @@ curl -X GET $BASE_URL -o dataset_metadata.json
 
 PARQUET_FILES=$(grep -o '"rfilename": *"[^"]*.parquet"' dataset_metadata.json | sed -E 's/"rfilename": *"([^"]*)"/\1/')
 
+# "2016_0000.parquet"
+START_FILE="2016_0000.parquet"
+STARTED=false
+
 for PARQUET_FILE in $PARQUET_FILES; do
-    YEAR=$(echo "$PARQUET_FILE" | grep -o '^[0-9]\{4\}')
-    HDFS_DESTINATION="$HDFS_BASE_DESTINATION/$YEAR"
+    if  [ "$STARTED" == true ] || [ "$PARQUET_FILE" == "$START_FILE" ] ; then
+        STARTED=true
+        YEAR=$(echo "$PARQUET_FILE" | grep -o '^[0-9]\{4\}')
+        HDFS_DESTINATION="$HDFS_BASE_DESTINATION/$YEAR"
 
-    echo "Creating HDFS directory: $HDFS_DESTINATION..."
-    hdfs dfs -mkdir -p "$HDFS_DESTINATION"
+        echo "Creating HDFS directory: $HDFS_DESTINATION..."
+        hdfs dfs -mkdir -p "$HDFS_DESTINATION"
 
-    DOWNLOAD_URL="$DOWNLOAD_URL_BASE/$PARQUET_FILE"
-    FILE_NAME=$(basename "$PARQUET_FILE")
+        DOWNLOAD_URL="$DOWNLOAD_URL_BASE/$PARQUET_FILE"
+        FILE_NAME=$(basename "$PARQUET_FILE")
 
-    echo "Downloading $DOWNLOAD_URL to NFS as $FILE_NAME..."
-    curl -L "$DOWNLOAD_URL" -o "$FILE_NAME"
+        echo "Downloading $DOWNLOAD_URL to NFS as $FILE_NAME..."
+        curl -L "$DOWNLOAD_URL" -o "$FILE_NAME"
 
-    echo "Uploading $FILE_NAME to HDFS..."
-    hdfs dfs -put "$FILE_NAME" "$HDFS_DESTINATION"
+        echo "Uploading $FILE_NAME to HDFS..."
+        hdfs dfs -put "$FILE_NAME" "$HDFS_DESTINATION"
 
-    echo "Removing file $FILE_NAME from NFS..."
-    rm "$FILE_NAME"
+        echo "Removing file $FILE_NAME from NFS..."
+        rm "$FILE_NAME"
+    else
+        echo "Skipping $PARQUET_FILE..."
+    fi
 done
 
 rm dataset_metadata.json
