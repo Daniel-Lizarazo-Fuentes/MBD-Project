@@ -13,7 +13,7 @@ Assumption that eduvpn is running and connection to cluster is made, if not see:
 ## Setup for running python files
 1. On local upload the respective file to the NFS: <br>```scp your_path/MBD-Project/news.py {snumber}@spark-head{number}.eemcs.utwente.nl:/home/snumber/```
 2. Login to NFS shell: <br>Enter cluster envirmnemt ```ssh {snumber}@spark-head{number}.eemcs.utwente.nl```, check if file present ```ls```
-3. Run file (don't forget custom setup in the case of executing on entire dataset!): <br> ```spark-submit news.py```
+3. Run file (don't forget custom setup in the case of executing on entire dataset!): <br> ```spark-submit --conf spark.dynamicAllocation.maxExecutors=5 news.py```
 
 ## Setup for downloading data to HDFS
 There are various shell scripts present, one only downaloads the parquet files from the train repository (```download_data.sh``` => ```/user/s2551055/NewsData/```, about 25 parquet files) which is nice for quickly running queries without the need of large computational power (for most basic queries no additional executors are needed above the default).
