@@ -1,6 +1,7 @@
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, count, lower
+from pyspark.sql import functions as F
 
 
 # -------------------------------------- Setup -----------------------------------------
@@ -10,37 +11,21 @@ spark = SparkSession.builder.getOrCreate()
 
 # ------------------------------------- Load data  --------------------------------------
 
-path = "/user/s2551055/NewsData/*/*.parquet"
-df = spark.read.parquet(path)
+path = "/user/s2551055/NewsData_full/*/*.parquet"
+df = spark.read.parquet(path).filter(
+    (col("language").isNotNull())
+    & (col("published_date") >= "2022-01-01") 
+)
 
 # ------------------------------------- Filtering ---------------------------------------
 
-date_start = "2022-01-01"
-
-keywords_dict = {
-    "en": ["ukraine", "russia"],
-    "fr": ["ukraine", "russie"],
-    "es": ["ucrania", "rusia"],
-    "ru": ["украина", "россия"],
-    "cz": ["ukrajina", "rusko"],
-    "ar": ["أوكرانيا", "روسيا"],
-}
-
-keyword_filters = [ 
-    ((col("language") == lang) & (lower(col("plain_text")).rlike(f"{kw[0]}.*?{kw[1]}")))
-    for lang, kw in keywords_dict.items()
-]
-
-# Leave |= as it needs to find only one of the languages (they're ofc never true for all at the same time)
-filter_condition = keyword_filters[0]
-for condition in keyword_filters[1:]:
-    filter_condition |= condition
-
 filtered_df = df.filter(
-    (col("published_date") >= date_start)
-    & (col("language").isNotNull())
-    & filter_condition
-).select("plain_text", "published_date", "language", "title")
+    (col("title").contains("ukraine") | col("title").contains("russia"))
+    | (col("title").contains("ucrania") | col("title").contains("rusia"))
+    | (col("title").contains("украина") | col("title").contains("россия"))
+    | (col("title").contains("ukrajina") | col("title").contains("rusko"))
+    | (col("title").contains("أوكرانيا") | col("title").contains("روسيا"))
+)
 
 # --------------------------------- Printing results ----------------------------------
 
