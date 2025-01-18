@@ -1,6 +1,6 @@
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, count, lower, udf, when
+from pyspark.sql.functions import col, count, lower, udf, when, year
 from pyspark.sql import functions as F
 from pyspark.sql.types import BooleanType
 
@@ -38,11 +38,10 @@ for keywords in keywords_dict.values():
         condition if filter_condition is None else filter_condition | condition
     )
 
-filtered_df = df.filter(filter_condition)
+df = df.filter(filter_condition)
 
 # --------------------------------- Printing results ----------------------------------
 
-# print("Rows before filtering: ",df.count())
 # print("Rows after filtering: ",filtered_df.count())
 
 # --------------------------------- Sentiment analysis ----------------------------------
@@ -135,9 +134,14 @@ def classify_sentiment(text, lang):
 
 classify_sentiment_udf = F.udf(lambda text, lang: classify_sentiment(text, lang), BooleanType())
 
-df_with_sentiment = filtered_df.withColumn("sentiment_positive", classify_sentiment_udf(F.col("title"), F.col("language")))
-sentiment_counts = (df_with_sentiment.groupBy("language", "sentiment_positive").count()).orderBy("language")
+df_with_sentiment = df.withColumn("sentiment_positive", classify_sentiment_udf(F.col("title"), F.col("language")))
+df_with_sentiment = df_with_sentiment.withColumn("year", year(F.col("published_date")))
 
+sentiment_counts = (
+    df_with_sentiment.groupBy("year", "language", "sentiment_positive")
+    .count()
+    .orderBy("year", "language")
+)
 
 # --------------------------------- Printing results ----------------------------------
 sentiment_counts.show()
