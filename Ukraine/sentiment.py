@@ -1,9 +1,18 @@
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, count, lower, udf, when, year, substring
-from pyspark.storagelevel import StorageLevel
+from pyspark.sql.functions import (
+    col,
+    count,
+    lower,
+    udf,
+    when,
+    year,
+    substring,
+    pandas_udf,
+)
 from pyspark.sql.types import BooleanType
 from pyspark.sql import functions as F
+import pandas as pd
 
 # -------------------------------------- Setup -----------------------------------------
 sc = SparkContext(appName="")
@@ -103,9 +112,9 @@ def classify_sentiment(text, lang):
     positive_words = set(keywords.get("positive", []))
     negative_words = set(keywords.get("negative", []))
 
-    words = text.split() 
-    positive_count = sum(1 for word in words if word.lower() in positive_words)
-    negative_count = sum(1 for word in words if word.lower() in negative_words)
+    words = text.split()
+    positive_count = sum(words.count(word) for word in positive_words)
+    negative_count = sum(words.count(word) for word in negative_words)
 
     return positive_count >= negative_count
 
@@ -115,57 +124,34 @@ classify_sentiment_udf = udf(
 )
 
 # ------------------------------------- Filtering --------------------------------------
-df = spark.read.parquet("/user/s2551055/NewsData/*/*.parquet").filter(
+df = spark.read.parquet("/user/s2551055/NewsData_full/*/*.parquet").filter(
     (col("published_date").isNotNull())
     & (col("published_date") >= "2022-01-01")
     & (col("language").isNotNull())
     & (col("title").isNotNull())
-    # & (col("plain_text").isNotNull()) # This already crashes even at large numbers of executors
     & (col("language").isin("en", "es", "ru", "ar"))
+    & filter_condition
 )
 
-df = df.filter(filter_condition)
 df = df.withColumn("year", year(col("published_date")))
-df = df.withColumn("plain_text", substring("plain_text", 0, 500))
-df = df.withColumn("plain_text", lower(col("plain_text")))
-size = df.count()
-print("Rows before filtering: ", size)
+# df = df.withColumn("plain_text", lower(substring(col("plain_text"), 0, 1000)))
+df = df.repartition(20)
+
+# size = df.count()
+# print("Rows after filtering: ", size)
 
 # --------------------------------- Sentiment analysis ----------------------------------
 
-# All executors should have access to all keywords
 broadcast_keywords = spark.sparkContext.broadcast(sentiment_keywords)
 
-result = spark.createDataFrame(
-    [], "year STRING, language STRING, sentiment_positive BOOLEAN, count LONG"
+df_with_sentiment = df.withColumn(
+    "sentiment_positive", classify_sentiment_udf(col("title"), col("language"))
 )
-
-df = df.repartition(20, "year", "language") 
-
-chunk_size = 5000
-offset = 0
-
-while offset < size:
-    chunk_df = df.limit(offset + chunk_size).subtract(df.limit(offset))
-
-    df_with_sentiment = chunk_df.withColumn(
-        "sentiment_positive", classify_sentiment_udf(col("plain_text"), col("language"))
-    )
-
-    sentiment_counts = df_with_sentiment.groupBy(
-        "year", "language", "sentiment_positive"
-    ).count()
-
-    result = result.union(sentiment_counts)
-
-    offset += chunk_size
-
 
 final_result = (
-    result.groupBy("year", "language", "sentiment_positive")
-    .agg(F.sum("count").alias("count"))
+    df_with_sentiment.groupBy("language", "year", "sentiment_positive")
+    .count()
     .orderBy("language", "year", "sentiment_positive")
 )
-
 
 final_result.show(100)
