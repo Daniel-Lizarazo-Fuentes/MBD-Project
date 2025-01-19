@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("./Ukraine/title_full.csv")  
+df = pd.read_csv("./Ukraine/both_results.csv")  
 df = df.pivot_table(index=["language", "year"], 
                      columns="sentiment", 
                      values="count", 
