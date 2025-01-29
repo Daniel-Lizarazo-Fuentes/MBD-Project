@@ -48,12 +48,18 @@ for lang,words in lookup_dict.items():
     df_all = None
     for year_folder in years:
          path = f"/user/s2551055/NewsData/{year_folder}/"
-         df_tmp=spark.read.parquet(path).select(*columns_to_load).withColumn("year", lit(year_folder))
-         df_tmp_lang=df_tmp.filter(df_tmp.language==lang)
+         # df_tmp=spark.read.parquet(path).select(*columns_to_load).withColumn("year", lit(year_folder))
+         # df_tmp_lang=df_tmp.filter(df_tmp.language==lang)
+         df_tmp = (
+             spark.read.parquet(path)
+             .select(*columns_to_load)
+             .withColumn("year", lit(year_folder))
+             .filter(col("language") == lang)  # Filter by language directly
+         )
          if df_all is None:
-             df_all=df_tmp_lang
+             df_all=df_tmp
          else:
-             df_all=df_all.union(df_tmp_lang)
+             df_all=df_all.union(df_tmp)
 
 #    df_all=df_all.repartition(80,"language")
 
