@@ -62,7 +62,7 @@ df = df.withColumn("month", month(col("published_date")))
 df = df.withColumn("title", lower(col("title")))
 df = df.select("title", "language", "year", "month")
 
-# print("Rows after filtering: ",  df.count())
+print("Rows after filtering: ",  df.count()) # Expensive, only for testing
 
 # -------------------------------------- Sentiment analysis --------------------------------------
 
@@ -71,7 +71,7 @@ configuration = XLMRobertaConfig()
 model = XLMRobertaModel(configuration)
 
 print("Broadcast model...")
-broadcast_model = spark.sparkContext.broadcast(model)
+broadcast_model = spark.sparkContext.broadcast(model) # will take up a lot of memory
 
 def analyze_sentiment(text):
     if not text:
@@ -85,7 +85,7 @@ sentiment_udf = udf(analyze_sentiment, StringType())
 
 print("Running sentiment analysis...")
 df = df.withColumn("sentiment", sentiment_udf(col("title")))
-df.show(20)
+df.show(20) # Expensive, only for testing
 
 
 df_ukraine = df.filter(
